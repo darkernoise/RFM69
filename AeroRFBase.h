@@ -160,7 +160,8 @@ public:
 	void set_firmware_info(char* created_on,
 			char* version,
 			uint8_t networkId,
-			uint8_t nodeId);
+			uint8_t nodeId,
+			bool force_new_guid);
 	void init_chdate(uint8_t *val);
 	void init_regkey(AeroRFRegKey reg_key);
 	void ascii_array_to_byte(char* ascii_lst, uint8_t* byte_lst, uint16_t lst_size);

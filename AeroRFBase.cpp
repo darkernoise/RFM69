@@ -68,25 +68,25 @@ bool AeroRFBase::initialize() {
 	this->load_eeprom();
 	bool rval = true;
 #ifdef STATUS_LED
-//	pinMode(STATUS_LED, OUTPUT);
-//	this->blink(STATUS_LED);
+	pinMode(STATUS_LED, OUTPUT);
+	this->blink(STATUS_LED);
 #endif
 
 
-//	//Initialize the radio
-//	radio.initialize(FREQUENCY,this->_nodeId,this->_networkId);
-//	radio.setHighPower(); //must include this only for RFM69HW/HCW!
-//
-//	//Output debugging only if serial is enabled
-//	#ifdef DEBUG_EN
-//		char buff[50];
-//		sprintf(buff, "\nTransmitting at %d Mhz...", int(radio.getFrequency()/1000000));
-//		DEBUGln(buff);
-//	#endif
-//	#ifdef STATUS_LED
-//		this->blink(STATUS_LED);
-//	#endif
-//	return rval;
+	//Initialize the radio
+	radio.initialize(FREQUENCY,this->_nodeId,this->_networkId);
+	radio.setHighPower(); //must include this only for RFM69HW/HCW!
+
+	//Output debugging only if serial is enabled
+	#ifdef DEBUG_EN
+		char buff[50];
+		sprintf(buff, "\nTransmitting at %d Mhz...", int(radio.getFrequency()/1000000));
+		DEBUGln(buff);
+	#endif
+	#ifdef STATUS_LED
+		this->blink(STATUS_LED);
+	#endif
+	return rval;
 }
 
 /*
@@ -240,12 +240,11 @@ void AeroRFBase::print_info() {
  *   fw_version " 5 byte char* in form "<major>.<minor>.<dot>"
  */
 void AeroRFBase::set_firmware_info(char* created_on, char* fw_version,
-		uint8_t networkId, uint8_t nodeId) {
+		uint8_t networkId, uint8_t nodeId, bool force_new_guid) {
 
 	AeroEEPROM tmpEEPROM;
 	uint8_t wrk=0;
 	chdate tmp_date;
-	bool force_new_guid = true;
 
 	this->read_all_eeprom(&tmpEEPROM);
 
