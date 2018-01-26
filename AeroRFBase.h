@@ -101,17 +101,20 @@
 
 #define EEPROM_ADDR_START 0
 #define CHECK_BYTE_INITIAL_FLASH 0x0A
+#define MAX_RANDOM 0xFF
 
 //Custom Types
-#define AY_GUID_SIZE 32
+#define AY_GUID_SIZE 32 //Must be a multiple of 4
 #define AY_VERSION_SIZE 3
 #define AY_DATE_SIZE 8
 #define AY_REG_KEY_SIZE 10
+#define AY_SERIAL_SIZE 10
 
 typedef uint8_t AeroRFGUID[AY_GUID_SIZE];
 typedef uint8_t AeroRFVersion[AY_VERSION_SIZE]; //3 bytes in form <major><minor><dot>
 typedef uint8_t chdate[AY_DATE_SIZE];
 typedef uint8_t AeroRFRegKey[AY_REG_KEY_SIZE];
+typedef uint8_t AeroRFSerial[AY_SERIAL_SIZE];
 
 //Common EEPROM structure used by all AeroRF Objects
 typedef struct AeroEEPROM{
@@ -123,6 +126,7 @@ typedef struct AeroEEPROM{
 	AeroRFVersion fw_version; //version number
 	chdate registerd_on; //registration date in YYYYMMDD
 	AeroRFRegKey regisration_key; //key of last registration
+	AeroRFSerial serial_num; //Unique serial number
 } AeroEEPROM;
 
 // #############################################
@@ -140,6 +144,8 @@ typedef struct AeroEEPROM{
 #define IE_REG_ON (IS_REG_ON + AY_DATE_SIZE)
 #define IS_REG_KEY (IE_REG_ON + 1)
 #define IE_REG_KEY (IS_REG_KEY + AY_REG_KEY_SIZE)
+#define IS_SERIAL (IE_REG_KEY + 1)
+#define IE_SERIAL (IS_SERIAL + AY_SERIAL_SIZE)
 // #############################################
 
 class AeroRFBase {
@@ -152,6 +158,9 @@ public:
 	uint8_t* get_guid();
 	uint8_t* get_fw_version();
 	uint8_t* get_created_on();
+	uint8_t* get_serial_number();
+	uint8_t* get_registered_on();
+	uint8_t* get_registeration_key();
 	void print_guid(AeroRFGUID guid);
 	void run_cycle();
 	bool initialize();
@@ -161,13 +170,17 @@ public:
 			char* version,
 			uint8_t networkId,
 			uint8_t nodeId,
-			bool force_new_guid);
+			bool force_new_guid,
+			char* guid_str,
+			char* serial_number);
 	void init_chdate(uint8_t *val);
 	void init_regkey(AeroRFRegKey reg_key);
 	void ascii_array_to_byte(char* ascii_lst, uint8_t* byte_lst, uint16_t lst_size);
 	void byte_array_to_ascii(uint8_t* byte_lst, char* ascii_lst, uint16_t lst_size);
 	void byte_array_copy(uint8_t* source_list, uint8_t* target_list, uint16_t lst_size);
 	char hex_to_ascii_char(uint8_t byte_val);
+	uint8_t ascii_char_to_hex(char ascii_char);
+	void guid_str_to_bytes(char* guid_str, AeroRFGUID guid);
 private:
 	uint8_t _check_byte;
 	uint8_t _nodeId;
@@ -177,12 +190,12 @@ private:
 	AeroRFVersion _fw_version;
 	chdate _registered_on;
 	AeroRFRegKey _registration_key;
+	AeroRFSerial _serial_num;
 	bool _blink_on;
 	bool read_all_eeprom(AeroEEPROM *eeprom_val);
 	void load_eeprom();
 	bool read_eeprom_char(unsigned char *val, int addr, int len);
 	void write_eeprom_char(unsigned char *val, int addr, int len);
-	void create_guid(AeroRFGUID guid);
 	void version_str_to_bytes(char* version_list, AeroRFVersion ver_bytes);
 };
 

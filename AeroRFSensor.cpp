@@ -39,20 +39,23 @@
 
 AeroRFSensor::AeroRFSensor(): AeroRFBase::AeroRFBase() {
 	last_command = 0; //initialize
+	this->_command_start_recived = false;
 }
 
 void AeroRFSensor::run_cycle() {
 	AeroRFBase::run_cycle();
-
-	this->send_identification();
-	return;
+	this->check_for_command_packet();
 
 	switch (this->last_command){
 	case 0:
 		break;
 	case CMD_IDENTIFY:
-//		this->print_info();
 		this->send_identification();
+		this->last_command = 0;
+		break;
+	case CMD_PRINT_INFO:
+		this->print_info();
+		this->last_command = 0;
 		break;
 	case CMD_LISTEN_START:
 		this->check_radio();
@@ -65,8 +68,8 @@ void AeroRFSensor::run_cycle() {
 
 bool AeroRFSensor::initialize(){
 	AeroRFBase::initialize();
-//	radio.promiscuous(1);
-//	radio.setListenOnly();
+	radio.promiscuous(1);
+	radio.setListenOnly();
 	return true;
 }
 
@@ -94,20 +97,30 @@ void AeroRFSensor::print_packet(uint8_t tagId, int16_t rssi) {
 //
 //Command packets can be at most 2 bytes
 void AeroRFSensor::check_for_command_packet() {
-	bool command_started = false;
-	char nchar = 0;
-	while (Serial.available()){
-		nchar = (char)Serial.read();
-		if (nchar == CMD_START){
-			command_started = true;
+	uint8_t tmp = 0;
+	uint8_t buff[50];
+	int indx=0;
+	while (Serial.available() > 0){
+		buff[indx] = Serial.read();
+		indx++;
+	}
+	//process the buffer
+	for (int i=0; i<indx; i++){
+		tmp = buff[i];
+//		Serial.print("Command received:");
+//		Serial.println(tmp);
+		if (tmp == CMD_START){
+			this->_command_start_recived = true;
+//			Serial.println("Command started...");
 		}
-		else if (command_started){
+		else if (this->_command_start_recived){
 			//Full command is now received, so process
-			this->process_command(nchar);
-			command_started = false;
+//			this->process_command(tmp);
+			this->last_command = tmp;
+			this->_command_start_recived = false;
 		}
 		else{
-			command_started = false;
+			this->_command_start_recived = false;
 		}
 	}
 }
@@ -123,16 +136,6 @@ void AeroRFSensor::check_radio() {
 			this->blink(STATUS_LED);
 		#endif
 	}
-}
-
-//Executes a command immediately if applicable
-void AeroRFSensor::process_command(char cmd) {
-	switch (cmd){
-	case CMD_IDENTIFY:
-		this->send_identification();
-		break;
-	}
-	this->last_command = cmd;
 }
 
 //Sends a sensor identification over serial
@@ -152,8 +155,10 @@ void AeroRFSensor::send_identification() {
 	SER_WRITE(this->getNetworkId());
 	SER_WRITE(this->getNodeId());
 	this->write_bytes(this->get_guid(), AY_GUID_SIZE);
-	this->write_bytes(this->get_fw_version(), AY_VERSION_SIZE);
 	this->write_bytes(this->get_created_on(), AY_DATE_SIZE);
+	this->write_bytes(this->get_fw_version(), AY_VERSION_SIZE);
+	this->write_bytes(this->get_registered_on(), AY_DATE_SIZE);
+	this->write_bytes(this->get_serial_number(), AY_SERIAL_SIZE);
 
 	SER_WRITE(CMD_TERMINATOR);
 }
