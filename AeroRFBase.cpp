@@ -124,7 +124,7 @@ bool AeroRFBase::read_all_eeprom(AeroEEPROM *eeprom_val) {
 
 	uint8_t ev=0;
 
-	for (int i=EEPROM_ADDR_START; i< IE_REG_KEY; i++){
+	for (int i=EEPROM_ADDR_START; i< IE_SERIAL; i++){
 		ev = EEPROM.read(i);
 
 		if (i==IS_CHECK_BYTE){
@@ -149,6 +149,8 @@ bool AeroRFBase::read_all_eeprom(AeroEEPROM *eeprom_val) {
 			eeprom_val->registerd_on[i-IS_REG_ON] = ev;
 		else if ((i >= IS_REG_KEY) && (i < IE_REG_KEY))
 			eeprom_val->regisration_key[i-IS_REG_KEY] = ev;
+		else if ((i >= IS_SERIAL) && (i < IE_SERIAL))
+			eeprom_val->serial_num[i-IS_SERIAL] = ev;
 
 //		DEBUG("Read eeprom addr: ");
 //		DEBUG(i);
@@ -156,19 +158,6 @@ bool AeroRFBase::read_all_eeprom(AeroEEPROM *eeprom_val) {
 //		DEBUGln(ev);
 
 	}
-
-//	DEBUG("eeprom_val->registerd_on: ");
-//	DEBUG(" Size: ");
-//	DEBUG(sizeof(eeprom_val->registerd_on));
-//	DEBUG(" val: ");
-//	DEBUG(eeprom_val->registerd_on[0]);
-//	DEBUG(eeprom_val->registerd_on[1]);
-//	DEBUG(eeprom_val->registerd_on[2]);
-//	DEBUG(eeprom_val->registerd_on[3]);
-//	DEBUG(eeprom_val->registerd_on[4]);
-//	DEBUG(eeprom_val->registerd_on[5]);
-//	DEBUG(eeprom_val->registerd_on[6]);
-//	DEBUGln(eeprom_val->registerd_on[7]);
 }
 
 /*
@@ -205,6 +194,14 @@ void AeroRFBase::print_info() {
 	Serial.print("Node Id: ");
 	Serial.println(this->_nodeId);
 
+	Serial.print("Serial #: ");
+	char ser_ascii[AY_SERIAL_SIZE];
+	this->byte_array_to_ascii(this->get_serial_number(), ser_ascii, AY_SERIAL_SIZE);
+	for (i=0; i<AY_SERIAL_SIZE; i++){
+		Serial.print(ser_ascii[i]);
+	}
+	Serial.println("");
+
 	Serial.print("GUID: ");
 	this->print_guid(this->get_guid());
 
@@ -240,7 +237,8 @@ void AeroRFBase::print_info() {
  *   fw_version " 5 byte char* in form "<major>.<minor>.<dot>"
  */
 void AeroRFBase::set_firmware_info(char* created_on, char* fw_version,
-		uint8_t networkId, uint8_t nodeId, bool force_new_guid) {
+		uint8_t networkId, uint8_t nodeId, bool force_new_guid,
+		char* guid_str, char* serial_number) {
 
 	AeroEEPROM tmpEEPROM;
 	uint8_t wrk=0;
@@ -267,10 +265,14 @@ void AeroRFBase::set_firmware_info(char* created_on, char* fw_version,
 	this->version_str_to_bytes(fw_version, this->_fw_version);
 	this->write_eeprom_char(this->_fw_version, IS_VERSION, AY_VERSION_SIZE);
 	//GUID if needed
-	if ((force_new_guid) || ((tmpEEPROM.guid[0] == 0) && (tmpEEPROM.guid[1] == 0))){
-		//GUID has never been set, so create and set
-		this->create_guid(tmpEEPROM.guid);
+	if (force_new_guid) {
+		this->guid_str_to_bytes(guid_str, tmpEEPROM.guid);
 		this->write_eeprom_char(tmpEEPROM.guid, IS_GUID, AY_GUID_SIZE);
+
+		//Serial Number
+		AeroRFSerial ser;
+		this->ascii_array_to_byte(serial_number, ser, AY_SERIAL_SIZE);
+		this->write_eeprom_char(ser, IS_SERIAL, AY_SERIAL_SIZE);
 	}
 	//Registered on
 	this->write_eeprom_char(tmpEEPROM.registerd_on, IS_REG_ON, AY_DATE_SIZE);
@@ -323,6 +325,7 @@ void AeroRFBase::load_eeprom() {
 		this->byte_array_copy(tmpEEPROM.fw_version, this->_fw_version, AY_VERSION_SIZE);
 		this->byte_array_copy(tmpEEPROM.registerd_on, this->_registered_on, AY_DATE_SIZE);
 		this->byte_array_copy(tmpEEPROM.regisration_key, this->_registration_key, AY_REG_KEY_SIZE);
+		this->byte_array_copy(tmpEEPROM.serial_num, this->_serial_num, AY_SERIAL_SIZE);
 	}
 }
 
@@ -339,21 +342,6 @@ void AeroRFBase::write_eeprom_char(unsigned char* val, int addr, int len) {
 		DEBUGln(tmp);
 		EEPROM.write(addr + i, tmp);
 	}
-}
-
-/*
- * Generates a GUID.
- */
-void AeroRFBase::create_guid(AeroRFGUID guid) {
-	uint8_t tmp=0;
-	//Seed with random sample of unused analog pin
-	randomSeed(analogRead(A0));
-	for (int i=0; i<AY_GUID_SIZE; i++){
-		tmp=random(0,15);
-		guid[i]=tmp;
-	}
-	Serial.print("Created new GUID: ");
-	this->print_guid(guid);
 }
 
 /*
@@ -402,6 +390,39 @@ uint8_t* AeroRFBase::get_fw_version() {
 
 uint8_t* AeroRFBase::get_created_on() {
 	return this->_created_on;
+}
+
+/*
+ * Converts a GUID string to internal bytes.
+ */
+void AeroRFBase::guid_str_to_bytes(char* guid_str, AeroRFGUID guid) {
+	int indx=0;
+	int i=0;
+
+	for (i=0; i<8; i++){
+		guid[indx] =  this->ascii_char_to_hex(guid_str[i]);
+		indx++;
+	}
+	for (i=9; i<13; i++){
+		guid[indx] =  this->ascii_char_to_hex(guid_str[i]);
+		indx++;
+		}
+	for (i=14; i<18; i++){
+		guid[indx] =  this->ascii_char_to_hex(guid_str[i]);
+		indx++;
+	}
+	for (i=19; i<23; i++){
+		guid[indx] =  this->ascii_char_to_hex(guid_str[i]);
+		indx++;
+	}
+	for (i=24; i<(AY_GUID_SIZE + 4); i++){
+		guid[indx] =  this->ascii_char_to_hex(guid_str[i]);
+		indx++;
+	}
+//	Serial.print(" Guid Str: ");
+//	Serial.print(guid_str);
+//	Serial.print(" = ");
+//	this->print_guid(guid);
 }
 
 /*
@@ -454,4 +475,34 @@ void AeroRFBase::init_regkey(AeroRFRegKey reg_key) {
 	for (int i=0; i<AY_REG_KEY_SIZE; i++){
 		reg_key[i] = 0;
 	}
+}
+
+/*
+ * Converts an ascii code to a hex byte value.
+ */
+uint8_t AeroRFBase::ascii_char_to_hex(char ascii_char) {
+	uint8_t rval = 0;
+	if ((ascii_char >= 48) && (ascii_char <= 57)){
+		//numeric
+		rval = ascii_char - 48;
+	}
+	else if((ascii_char >= 65) && (ascii_char <= 70)){
+		rval = ascii_char - 55;
+	}
+	else if((ascii_char >= 97) && (ascii_char <= 102)){
+		rval = ascii_char - 87;
+	}
+	return rval;
+}
+
+uint8_t* AeroRFBase::get_serial_number() {
+	return this->_serial_num;
+}
+
+uint8_t* AeroRFBase::get_registered_on() {
+	return this->_registered_on;
+}
+
+uint8_t* AeroRFBase::get_registeration_key() {
+	return this->_registration_key;
 }
