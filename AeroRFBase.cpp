@@ -175,18 +175,20 @@ void AeroRFBase::print_info() {
 //	Serial.println(buff);
 
 	Serial.print("Version: ");
-	char cver[5];
-	cver[0] = (this->_fw_version[0]) + 48;
-	cver[1] = '.';
-	cver[2] = (this->_fw_version[1]) + 48;
-	cver[3] = '.';
-	cver[4] = (this->_fw_version[2]) + 48;
-	Serial.println(cver);
+	Serial.print((this->_fw_version[0]));
+	Serial.print(".");
+	Serial.print((this->_fw_version[1]));
+	Serial.print(".");
+	Serial.print((this->_fw_version[2]));
+	Serial.println("");
 
 	Serial.print("Created: ");
 	char created_ascii[AY_DATE_SIZE];
 	this->byte_array_to_ascii(this->_created_on, created_ascii, AY_DATE_SIZE);
-	Serial.println(created_ascii);
+	for (i=0; i<8; i++){
+		Serial.print(created_ascii[i]);
+	}
+	Serial.println("");
 
 	Serial.print("Network: ");
 	Serial.println(this->_networkId);
@@ -210,14 +212,10 @@ void AeroRFBase::print_info() {
 	this->byte_array_to_ascii(this->_registered_on, reg_ascii, AY_DATE_SIZE);
 	//Note: there is a defect in Serial.println such that it is not writing
 	//the custom types correctly.
-	Serial.print(reg_ascii[0]);
-	Serial.print(reg_ascii[1]);
-	Serial.print(reg_ascii[2]);
-	Serial.print(reg_ascii[3]);
-	Serial.print(reg_ascii[4]);
-	Serial.print(reg_ascii[5]);
-	Serial.print(reg_ascii[6]);
-	Serial.println(reg_ascii[7]);
+	for (i=0; i<8; i++){
+		Serial.print(reg_ascii[i]);
+	}
+	Serial.println("");
 
 	Serial.print("Registration Key: ");
 	char reg_key_ascii[AY_REG_KEY_SIZE];
@@ -226,6 +224,9 @@ void AeroRFBase::print_info() {
 		Serial.print(reg_key_ascii[i]);
 	}
 	Serial.println("");
+
+//	Serial.print("Size: ");
+//	Serial.println(IE_SERIAL);
 }
 
 /*
@@ -505,4 +506,28 @@ uint8_t* AeroRFBase::get_registered_on() {
 
 uint8_t* AeroRFBase::get_registeration_key() {
 	return this->_registration_key;
+}
+
+void AeroRFBase::write_bytes_hex(uint8_t* lst_val, uint16_t size) {
+	char tmp='0';
+	for (uint16_t i=0; i<size; i++){
+		tmp = this->hex_to_ascii_char(lst_val[i]);
+		SER_WRITE(tmp);
+	}
+}
+
+void AeroRFBase::write_bytes(uint8_t* lst_val, uint16_t size) {
+	uint8_t tmp = 0;
+	for (uint16_t i=0; i<size; i++){
+		tmp = lst_val[i];
+		SER_WRITE(tmp);
+	}
+}
+
+void AeroRFBase::write_bytes_ascii(uint8_t* lst_val, uint16_t size) {
+	char tmp='0';
+	for (uint16_t i=0; i<size; i++){
+		tmp = this->hex_to_ascii_char(lst_val[i]);
+		SER_WRITE(tmp);
+	}
 }
