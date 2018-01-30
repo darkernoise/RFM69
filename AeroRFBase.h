@@ -68,8 +68,9 @@
 //dial their power down to only the required level
 //*********************************************************************************************
 #define SERIAL_EN     //Must be enabled
-#define SERIAL_BAUD   115200
-//#define SERIAL_BAUD   9600
+//#define SERIAL_BAUD   57600
+#define SERIAL_BAUD   19200
+
 #define SER_WRITE(input){Serial.write(input);}
 #define SER_WRITELN(input){Serial.println(input);}
 
@@ -181,6 +182,10 @@ public:
 	char hex_to_ascii_char(uint8_t byte_val);
 	uint8_t ascii_char_to_hex(char ascii_char);
 	void guid_str_to_bytes(char* guid_str, AeroRFGUID guid);
+protected:
+	void write_bytes(uint8_t* lst_val, uint16_t size);
+	void write_bytes_hex(uint8_t* lst_val, uint16_t size);
+	void write_bytes_ascii(uint8_t* lst_val, uint16_t size);
 private:
 	uint8_t _check_byte;
 	uint8_t _nodeId;

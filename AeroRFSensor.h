@@ -40,10 +40,10 @@
 #define CMD_START 0x53 			//start of command
 #define CMD_IDENTIFY 0x49		//request identification
 #define CMD_PRINT_INFO 0x50		//print human readable information
-#define CMD_LISTEN_START 0x104	//start listening to sensors
-#define CMD_LISTEN_STOP 0x105 	//stop listening to sensors
+#define CMD_LISTEN_START 0x68	//start listening to sensors
+#define CMD_LISTEN_STOP 0x69 	//stop listening to sensors
 #define CMD_RESPONSE_START 0xFC
-#define CMD_TERMINATOR 0x13
+#define CMD_TERMINATOR 0xB2
 //*********************************************************************************************
 
 #ifndef AERORFSENSOR_H_
@@ -59,7 +59,6 @@ public:
 	AeroRFSensor();
 	void run_cycle();
 	bool initialize();
-	void write_bytes(uint8_t* lst_val, uint16_t size);
 private:
 	bool _command_start_recived;
 	void print_debug(uint8_t tagId, int16_t rssi);
@@ -67,6 +66,7 @@ private:
 	void check_radio();
 	void check_for_command_packet();
 	void send_identification();
+	void process_command(uint8_t cmd);
 };
 
 #endif /* AERORFSENSOR_H_ */
